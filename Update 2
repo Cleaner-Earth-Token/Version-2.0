@@ -1,0 +1,347 @@
+pragma solidity 0.8.6;
+
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol";
+
+contract Clet is ERC20 {
+
+ mapping(address => uint256) private _balances;
+
+ mapping(address => mapping(address => uint256)) private _allowances;
+
+
+ uint256 private _totalSupply;
+ string private _name;
+ string private _symbol;
+ uint256 private charityFee;
+ uint256 private stakingFee;
+ uint256 private devFee;
+ uint256 private totalFee;
+
+ address private _charity;
+ address private _stake;
+ address private _dev;
+ address private _marketing;
+
+  constructor() ERC20("Cleaner Earth", "CLNRTKN") {
+  _charity = 0x1FFcCCA0AA9a6C34E8231fbFd309005CE3DF5465; // Each wallet will have its own governance contract
+  _stake = 0xA7bdcC64BC6628B524c82A036447Bb236bAEE849; // and changes will only happen after community votes
+  _dev = 0x8257D87792Bf6909308c2d438306C8CdC1D01Ec8;
+  _marketing = 0x2b3C12083BA60788d706Feb63F407E6214Cb7ECf;
+
+  _name = "Cleaner Earth";
+  _symbol = "CLNRTKN";
+
+  _mint(_msgSender(), 70000000000000000000000000);
+
+  _mint(_charity, 10000000000000000000000000);
+
+  _mint(_stake, 10000000000000000000000000);
+
+  _mint(_dev, 5000000000000000000000000);
+
+  _mint(_marketing, 5000000000000000000000000);
+}
+/**
+ * @dev Returns the name of the token.
+ */
+function name() public view virtual override returns (string memory) {
+    return _name;
+}
+
+/**
+ * @dev Returns the symbol of the token, usually a shorter version of the
+ * name.
+ */
+function symbol() public view virtual override returns (string memory) {
+    return _symbol;
+}
+
+/**
+ * @dev Returns the number of decimals used to get its user representation.
+ * For example, if `decimals` equals `2`, a balance of `505` tokens should
+ * be displayed to a user as `5.05` (`505 / 10 ** 2`).
+ *
+ * Tokens usually opt for a value of 18, imitating the relationship between
+ * Ether and Wei. This is the value {ERC20} uses, unless this function is
+ * overridden;
+ *
+ * NOTE: This information is only used for _display_ purposes: it in
+ * no way affects any of the arithmetic of the contract, including
+ * {IERC20-balanceOf} and {IERC20-transfer}.
+ */
+function decimals() public view virtual override returns (uint8) {
+    return 18;
+}
+
+/**
+ * @dev See {IERC20-totalSupply}.
+
+
+ */
+ function totalSupply() public view virtual override returns (uint256) {
+     return _totalSupply;
+ }
+
+ function charitySupply() external view virtual  returns (uint256) {
+     return _balances[_charity];
+ }function stakeSupply() external view virtual  returns (uint256) {
+     return _balances[_stake];
+ }function devSupply() external view virtual  returns (uint256) {
+     return _balances[_dev];
+ }
+ function marketingSupply() external view virtual  returns (uint256) {
+     return _balances[_marketing];
+ }
+/**
+ * @dev See {IERC20-balanceOf}.
+ */
+function balanceOf(address account) public view virtual override returns (uint256) {
+
+    return _balances[account];
+}
+
+/**
+ * @dev See {IERC20-transfer}.
+ *
+ * Requirements:
+ *
+ * - `recipient` cannot be the zero address.
+ * - the caller must have a balance of at least `amount`.
+ */
+function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+    require(recipient != address(0), "Dont transfer to address(0)");
+   require(_balances[_msgSender()] >= amount + totalFee, "Insufficient funds");
+    _transfer(_msgSender(), recipient, amount);
+    return true;
+}
+
+/**
+ * @dev See {IERC20-allowance}.
+ */
+function allowance(address owner, address spender) public view virtual override returns (uint256) {
+    return _allowances[owner][spender];
+}
+
+/**
+ * @dev See {IERC20-transferFrom}.
+ *
+ * Emits an {Approval} event indicating the updated allowance. This is not
+ * required by the EIP. See the note at the beginning of {ERC20}.
+ *
+ * Requirements:
+ *
+ * - `sender` and `recipient` cannot be the zero address.
+ * - `sender` must have a balance of at least `amount`.
+ * - the caller must have allowance for ``sender``'s tokens of at least
+ * `amount`.
+ */
+function transferFrom(
+    address sender,
+    address recipient,
+    uint256 amount
+) public virtual override returns (bool) {
+    require(sender != address(0) && recipient != address(0), "Sender and recipient cannot be address(0)");
+    require(_balances[sender] >= amount + totalFee, "Insufficient funds");
+    _transfer(sender, recipient, amount);
+
+    uint256 currentAllowance = _allowances[sender][_msgSender()];
+    require(currentAllowance >= amount + totalFee, "ERC20: transfer amount exceeds allowance");
+    unchecked {
+        _approve(sender, _msgSender(), currentAllowance - amount - totalFee);
+    }
+
+    return true;
+}
+
+/**
+ * @dev Atomically increases the allowance granted to `spender` by the caller.
+ *
+ * This is an alternative to {approve} that can be used as a mitigation for
+ * problems described in {IERC20-approve}.
+ *
+ * Emits an {Approval} event indicating the updated allowance.
+ *
+ * Requirements:
+ *
+ * - `spender` cannot be the zero address.
+ */
+function increaseAllowance(address spender, uint256 addedValue) public virtual override returns (bool) {
+    require(spender != address(0), "spender cannot be addres(0)");
+    _approve(_msgSender(), spender, _allowances[_msgSender()][spender] + addedValue);
+
+    return true;
+}
+
+/**
+ * @dev Atomically decreases the allowance granted to `spender` by the caller.
+ *
+ * This is an alternative to {approve} that can be used as a mitigation for
+ * problems described in {IERC20-approve}.
+ *
+ * Emits an {Approval} event indicating the updated allowance.
+ *
+ * Requirements:
+ *
+ * - `spender` cannot be the zero address.
+ * - `spender` must have allowance for the caller of at least
+ * `subtractedValue`.
+ */
+function decreaseAllowance(address spender, uint256 subtractedValue) public virtual override returns (bool) {
+    require(spender != address(0), "Spender cannot be address(0)");
+    uint256 currentAllowance = _allowances[_msgSender()][spender];
+    require(currentAllowance >= subtractedValue, "ERC20: decreased allowance below zero");
+
+    _approve(_msgSender(), spender, currentAllowance - subtractedValue);
+
+    return true;
+}
+
+ function _calculateFee(uint256 amount) internal returns (uint256){
+   charityFee = amount * 100 / 10000;
+   stakingFee = amount * 100 / 10000;
+   devFee = amount * 100 / 20000;
+   totalFee = charityFee + stakingFee + devFee;
+   return totalFee;
+ }
+
+
+/**
+ * @dev Moves `amount` of tokens from `sender` to `recipient`.
+ *
+ * This internal function is equivalent to {transfer}, and can be used to
+ * e.g. implement automatic token fees, slashing mechanisms, etc.
+ *
+ * Emits a {Transfer} event.
+ *
+ *
+
+
+
+ * Requirements:
+ *
+ * - `sender` cannot be the zero address.
+ * - `recipient` cannot be the zero address.
+ * - `sender` must have a balance of at least `amount`.
+ */
+function _transfer(
+    address sender,
+    address recipient,
+    uint256 amount
+) internal virtual override {
+    require(sender != address(0), "ERC20: transfer from the zero address");
+    require(recipient != address(0), "ERC20: transfer to the zero address");
+
+    _beforeTokenTransfer(sender, recipient, amount);
+    //totalFee = amount / 40;
+
+    _calculateFee(amount);
+
+    uint256 senderBalance = _balances[sender];
+    require(senderBalance >= amount + totalFee, "ERC20: transfer amount exceeds balance");
+
+    _balances[sender] = senderBalance - amount - totalFee;
+
+    _balances[recipient] += amount;
+    emit Transfer(sender, recipient, amount);
+
+    _balances[_charity] += charityFee;
+    emit Transfer(sender, _charity, charityFee);
+
+    _balances[_stake] += stakingFee;
+    emit Transfer(sender, _stake, stakingFee);
+
+    _balances[_dev] += devFee;
+    emit Transfer(sender, _dev, devFee);
+
+
+
+    _afterTokenTransfer(sender, recipient, amount);
+}
+
+/** @dev Creates `amount` tokens and assigns them to `account`, increasing
+ * the total supply.
+ *
+ * Emits a {Transfer} event with `from` set to the zero address.
+ *
+ * Requirements:
+ *
+ * - `account` cannot be the zero address.
+ */
+function _mint(address account, uint256 amount) internal virtual override {
+    require(account != address(0), "ERC20: mint to the zero address");
+
+    _beforeTokenTransfer(address(0), account, amount);
+
+    _totalSupply += amount;
+    _balances[account] += amount;
+    emit Transfer(address(0), account, amount);
+
+    _afterTokenTransfer(address(0), account, amount);
+}
+
+/**
+ * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
+ *
+ * This internal function is equivalent to `approve`, and can be used to
+ * e.g. set automatic allowances for certain subsystems, etc.
+ *
+ * Emits an {Approval} event.
+ *
+ * Requirements:
+ *
+ * - `owner` cannot be the zero address.
+ * - `spender` cannot be the zero address.
+ */
+function _approve(
+    address owner,
+    address spender,
+    uint256 amount
+) internal virtual override {
+    require(owner != address(0), "ERC20: approve from the zero address");
+    require(spender != address(0), "ERC20: approve to the zero address");
+
+    _calculateFee(amount);
+    _allowances[owner][spender] = amount + totalFee;
+    emit Approval(owner, spender, amount);
+}
+
+/**
+ * @dev Hook that is called before any transfer of tokens. This includes
+ * minting and burning.
+ *
+ * Calling conditions:
+ *
+ * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+ * will be transferred to `to`.
+ * - when `from` is zero, `amount` tokens will be minted for `to`.
+ * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
+ * - `from` and `to` are never both zero.
+ *
+ * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+ */
+function _beforeTokenTransfer(
+    address from,
+    address to,
+    uint256 amount
+) internal virtual override {}
+
+/**
+ * @dev Hook that is called after any transfer of tokens. This includes
+ * minting and burning.
+ *
+ * Calling conditions:
+ *
+ * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+ * has been transferred to `to`.
+ * - when `from` is zero, `amount` tokens have been minted for `to`.
+ * - when `to` is zero, `amount` of ``from``'s tokens have been burned.
+ * - `from` and `to` are never both zero.
+ *
+ * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+ */
+function _afterTokenTransfer(
+    address from,
+    address to,
+    uint256 amount
+) internal virtual override {}
+}
